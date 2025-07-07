@@ -26,3 +26,11 @@ export interface Country {
   };
 }
 
+export interface ExchangeRateType {
+
+  base: string;
+  date: string;
+  rates: {
+    [currency: string]: number;
+  };
+}

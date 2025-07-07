@@ -11,6 +11,8 @@ import { AuthProvider, useAuth } from "./contexts/AuthContext";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import LoadingSpinner from "./components/LoadingSpinner";
 import ErrorBoundary from "./components/ErrorBoundary";
+import Customers from "./pages/Customers";
+import Exchange from "./pages/Exchange";
 
 // Lazy load components for code splitting
 const AuthLayout = lazy(() => import("./layouts/AuthLayout/AuthLayout"));
@@ -18,7 +20,6 @@ const Login = lazy(() => import("./pages/Login"));
 const Register = lazy(() => import("./pages/Register"));
 const DashboardLayout = lazy(() => import("./layouts/DashboardLayout/DashboardLayout"));
 const Dashboard = lazy(() => import("./pages/Dashboard"));
-const Analytics = lazy(() => import("./pages/Analytics"));
 const Products = lazy(() => import("./pages/Products"));
 
 // Optimized Query Client configuration
@@ -109,8 +110,9 @@ const App: React.FC = memo(() => {
                       }
                     >
                       <Route index element={<Dashboard />} />
-                      <Route path="analytics" element={<Analytics />} />
+                      <Route path="analytics" element={<Exchange />} />
                       <Route path="products" element={<Products />} />
+                      <Route path="customers" element={<Customers />} />
                     </Route>
                     <Route
                       path="/"

@@ -1,13 +1,17 @@
-import React from 'react';
+
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import AuthLayout from './layouts/AuthLayout/AuthLayout';
 import Login from './pages/Login';
 import DashboardLayout from './layouts/DashboardLayout/DashboardLayout';
 import Dashboard from './pages/Dashboard';
+import { ThemeProvider } from './contexts/ThemeContext';
+import { UserPreferencesProvider } from './contexts/UserPreferencesContext';
 
 
 function App() {
   return (
+    <ThemeProvider>
+      <UserPreferencesProvider>
     <Router>
       <div className="App">
         <Routes>
@@ -31,6 +35,8 @@ function App() {
         </Routes>
       </div>
     </Router>
+    </UserPreferencesProvider>
+    </ThemeProvider>
   );
 }
 

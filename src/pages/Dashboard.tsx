@@ -1,11 +1,8 @@
-// src/pages/Dashboard/Dashboard.tsx
+
 import React from 'react';
-// import KPIGrid from '../../components/dashboardApp/KPICards/KPIGrid';
-// import TabContent from '../../components/dashboardApp/TabContent/TabContent';
 import KPIGrid from '../components/KPI/KIPGrid';
 import TabContent from '../components/dashboard/TabContent';
-// import { KPIGrid } from '../../components/dashboard/KPICards';
-// import { TabContent } from '../../components/dashboard/TabContent';
+
 
 const Dashboard: React.FC = () => {
   const tabs = [

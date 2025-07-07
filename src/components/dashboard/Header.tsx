@@ -1,8 +1,10 @@
-
+// src/components/dashboard/Header/Header.tsx
 import React from 'react';
 import { Bars3Icon, BellIcon, SunIcon, MoonIcon } from '@heroicons/react/24/outline';
+//mport { useTheme } from '../../../contexts/ThemeContext';
 import SearchBar from './SearchBar';
 import UserProfile from './UserProfile';
+import { useTheme } from '../../contexts/ThemeContext';
 
 interface HeaderProps {
   onMenuClick: () => void;
@@ -10,12 +12,10 @@ interface HeaderProps {
 }
 
 export const Header: React.FC<HeaderProps> = ({ onMenuClick, sidebarCollapsed }) => {
-  const [darkMode, setDarkMode] = React.useState(false);
+  const { theme, setTheme, resolvedTheme } = useTheme();
 
-  const toggleDarkMode = () => {
-    setDarkMode(!darkMode);
-    // Add logic to toggle dark mode class on document
-    document.documentElement.classList.toggle('dark');
+  const toggleTheme = () => {
+    setTheme(resolvedTheme === 'dark' ? 'light' : 'dark');
   };
 
   return (
@@ -27,6 +27,7 @@ export const Header: React.FC<HeaderProps> = ({ onMenuClick, sidebarCollapsed })
           <button
             onClick={onMenuClick}
             className="p-2 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700 lg:hidden"
+            aria-label="Toggle menu"
           >
             <Bars3Icon className="w-6 h-6 text-gray-600 dark:text-gray-300" />
           </button>
@@ -49,20 +50,29 @@ export const Header: React.FC<HeaderProps> = ({ onMenuClick, sidebarCollapsed })
 
         {/* Right Section */}
         <div className="flex items-center space-x-4">
-          {/* Theme Toggle */}
-          <button
-            onClick={toggleDarkMode}
-            className="p-2 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
-          >
-            {darkMode ? (
-              <SunIcon className="w-5 h-5 text-gray-600 dark:text-gray-300" />
-            ) : (
-              <MoonIcon className="w-5 h-5 text-gray-600 dark:text-gray-300" />
-            )}
-          </button>
+          {/* Theme Toggle with Tooltip */}
+          <div className="relative group">
+            <button
+              onClick={toggleTheme}
+              className="p-2 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+              aria-label={`Switch to ${resolvedTheme === 'dark' ? 'light' : 'dark'} mode`}
+            >
+              {resolvedTheme === 'dark' ? (
+                <SunIcon className="w-5 h-5 text-gray-600 dark:text-gray-300" />
+              ) : (
+                <MoonIcon className="w-5 h-5 text-gray-600 dark:text-gray-300" />
+              )}
+            </button>
+            <span className="absolute top-full left-1/2 transform -translate-x-1/2 mt-2 px-2 py-1 text-xs bg-gray-800 dark:bg-gray-700 text-white rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap">
+              {resolvedTheme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
+            </span>
+          </div>
 
           {/* Notifications */}
-          <button className="p-2 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors relative">
+          <button 
+            className="p-2 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors relative"
+            aria-label="Notifications"
+          >
             <BellIcon className="w-5 h-5 text-gray-600 dark:text-gray-300" />
             <span className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full"></span>
           </button>

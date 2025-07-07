@@ -1,4 +1,4 @@
-import React, { Suspense, lazy, memo, useCallback } from "react";
+import React, { Suspense, lazy, memo, } from "react";
 import {
   BrowserRouter as Router,
   Routes,
@@ -20,8 +20,6 @@ const DashboardLayout = lazy(() => import("./layouts/DashboardLayout/DashboardLa
 const Dashboard = lazy(() => import("./pages/Dashboard"));
 const Analytics = lazy(() => import("./pages/Analytics"));
 const Products = lazy(() => import("./pages/Products"));
-// const Customers = lazy(() => import("./pages/Customers"));
-// const Settings = lazy(() => import("./pages/Settings"));
 
 // Optimized Query Client configuration
 const queryClient = new QueryClient({
@@ -36,7 +34,6 @@ const queryClient = new QueryClient({
     },
   },
 });
-
 
 // Optimized Suspense Wrapper
 const SuspenseWrapper: React.FC<{ children: React.ReactNode; fallback?: React.ReactNode }> = memo(({ 
@@ -80,73 +77,52 @@ const PublicRoute: React.FC<{ children: React.ReactNode }> = memo(({ children })
   return <SuspenseWrapper>{children}</SuspenseWrapper>;
 });
 
-// Memoized Route Components for better performance
-const AuthRoutes = memo(() => (
-  <Route
-    path="/auth"
-    element={
-      <PublicRoute>
-        <AuthLayout />
-      </PublicRoute>
-    }
-  >
-    <Route path="login" element={<Login />} />
-    <Route path="register" element={<Register />} />
-    <Route path="" element={<Navigate to="/auth/login" replace />} />
-  </Route>
-));
-
-const DashboardRoutes = memo(() => (
-  <Route
-    path="/dashboard"
-    element={
-      <ProtectedRoute>
-        <DashboardLayout />
-      </ProtectedRoute>
-    }
-  >
-    <Route path="" element={<Dashboard />} />
-    <Route path="analytics" element={<Analytics />} />
-    <Route path="products" element={<Products />} />
-  </Route>
-));
-
-// Root redirect component
-const RootRedirect = memo(() => (
-  <Route
-    path="/"
-    element={
-      <ProtectedRoute>
-        <Navigate to="/dashboard" replace />
-      </ProtectedRoute>
-    }
-  />
-));
-
 // Main App Component with performance optimizations
 const App: React.FC = memo(() => {
-  // Memoize the router setup to prevent unnecessary re-renders
-  const routerContent = useCallback(() => (
-    <Router>
-      <div className="App">
-        <Routes>
-          <AuthRoutes />
-          <DashboardRoutes />
-          <RootRedirect />
-        </Routes>
-      </div>
-    </Router>
-  ), []);
-
   return (
     <ErrorBoundary>
       <QueryClientProvider client={queryClient}>
         <ThemeProvider>
           <UserPreferencesProvider>
             <AuthProvider>
-              <SuspenseWrapper>
-                {routerContent()}
-              </SuspenseWrapper>
+              <Router>
+                <SuspenseWrapper>
+                  <Routes>
+                    <Route
+                      path="/auth"
+                      element={
+                        <PublicRoute>
+                          <AuthLayout />
+                        </PublicRoute>
+                      }
+                    >
+                      <Route path="login" element={<Login />} />
+                      <Route path="register" element={<Register />} />
+                      <Route index element={<Navigate to="login" replace />} />
+                    </Route>
+                    <Route
+                      path="/dashboard"
+                      element={
+                        <ProtectedRoute>
+                          <DashboardLayout />
+                        </ProtectedRoute>
+                      }
+                    >
+                      <Route index element={<Dashboard />} />
+                      <Route path="analytics" element={<Analytics />} />
+                      <Route path="products" element={<Products />} />
+                    </Route>
+                    <Route
+                      path="/"
+                      element={
+                        <ProtectedRoute>
+                          <Navigate to="/dashboard" replace />
+                        </ProtectedRoute>
+                      }
+                    />
+                  </Routes>
+                </SuspenseWrapper>
+              </Router>
             </AuthProvider>
           </UserPreferencesProvider>
         </ThemeProvider>
@@ -154,6 +130,5 @@ const App: React.FC = memo(() => {
     </ErrorBoundary>
   );
 });
-
 
 export default App;

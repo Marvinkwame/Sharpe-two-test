@@ -1,12 +1,15 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+// src/contexts/AuthContext.tsx
+import React, { createContext, useContext, useEffect, useState } from 'react';
 import type { ReactNode } from 'react';
 import CryptoJS from 'crypto-js';
+import { useLocalStorage } from '../hooks/useLocalStorage';
 
 // Types
 interface User {
   id: string;
   email: string;
   name: string;
+  password: string;
   role: 'admin' | 'user';
   createdAt: string;
 }
@@ -20,19 +23,14 @@ interface AuthContextType {
   isLoading: boolean;
 }
 
-// Improved password hashing with PBKDF2
+// Password hashing utilities
 const hashPassword = (password: string): string => {
   try {
-    // Generate a random salt
     const salt = CryptoJS.lib.WordArray.random(128/8);
-    
-    // Hash the password with PBKDF2
     const hash = CryptoJS.PBKDF2(password, salt, {
       keySize: 256/32,
-      iterations: 10000 // Increased iterations for better security
+      iterations: 10000
     });
-    
-    // Return salt + hash (both as hex strings)
     return salt.toString() + ':' + hash.toString();
   } catch (error) {
     console.error('Password hashing error:', error);
@@ -42,24 +40,14 @@ const hashPassword = (password: string): string => {
 
 const verifyPassword = (password: string, storedHash: string): boolean => {
   try {
-    // Split the stored hash into salt and hash parts
     const [saltHex, hashHex] = storedHash.split(':');
+    if (!saltHex || !hashHex) return false;
     
-    if (!saltHex || !hashHex) {
-      console.error('Invalid stored hash format');
-      return false;
-    }
-    
-    // Parse the salt from hex
     const salt = CryptoJS.enc.Hex.parse(saltHex);
-    
-    // Hash the input password with the same salt and parameters
     const hash = CryptoJS.PBKDF2(password, salt, {
       keySize: 256/32,
       iterations: 10000
     });
-    
-    // Compare the hashes
     return hash.toString() === hashHex;
   } catch (error) {
     console.error('Password verification error:', error);
@@ -69,9 +57,7 @@ const verifyPassword = (password: string, storedHash: string): boolean => {
 
 const isValidEmail = (email: string): boolean => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 
-const generateSecureId = (): string => {
-  return CryptoJS.lib.WordArray.random(16).toString();
-};
+const generateSecureId = (): string => CryptoJS.lib.WordArray.random(16).toString();
 
 // Create context
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -79,40 +65,30 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [rememberMe, setRememberMe] = useLocalStorage<boolean>('rememberMe', false);
+  const [storedUser, setStoredUser] = useLocalStorage<User | null>('user', null);
+  const [registeredUsers, setRegisteredUsers] = useLocalStorage<User[]>('registeredUsers', []);
 
-  // Initial auth check (runs once on mount)
+  // Initial auth check
   useEffect(() => {
     const initializeAuth = async () => {
       try {
-        const savedUser = sessionStorage.getItem('user');
-        const rememberMe = localStorage.getItem('rememberMe');
-        
-        if (savedUser) {
-          const parsedUser = JSON.parse(savedUser);
-          setUser(parsedUser);
-        } else if (rememberMe === 'true') {
-          const rememberedUser = localStorage.getItem('user');
-          if (rememberedUser) {
-            const parsedUser = JSON.parse(rememberedUser);
-            setUser(parsedUser);
-            sessionStorage.setItem('user', rememberedUser);
-          }
+        if (storedUser) {
+          setUser(storedUser);
         }
       } catch (error) {
         console.error('Auth initialization error:', error);
-        // Clear corrupted data
-        sessionStorage.removeItem('user');
-        localStorage.removeItem('user');
-        localStorage.removeItem('rememberMe');
+        setStoredUser(null);
+        setRememberMe(false);
       } finally {
         setIsLoading(false);
       }
     };
 
     initializeAuth();
-  }, []);
+  }, [storedUser, setStoredUser, setRememberMe]);
 
-  // Auto-logout timer (runs when user changes)
+  // Auto-logout timer
   useEffect(() => {
     if (!user) return;
 
@@ -144,43 +120,25 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         return false;
       }
       
-      // Simulate API delay
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      await new Promise(resolve => setTimeout(resolve, 1000)); // Simulate API delay
       
-      const users = JSON.parse(sessionStorage.getItem('registeredUsers') || '[]');
-      const foundUser = users.find((u: any) => u.email === email);
-      
-      if (!foundUser) {
-        console.error('User not found');
-        return false;
-      }
+      const foundUser = registeredUsers.find(u => u.email === email);
+      if (!foundUser) return false;
 
-      // Verify password using improved verification
-      const isPasswordValid = verifyPassword(password, foundUser.password);
-      
-      if (!isPasswordValid) {
-        console.error('Invalid password');
-        return false;
-      }
+      if (!verifyPassword(password, foundUser.password)) return false;
 
       const userData: User = {
         id: foundUser.id,
         email: foundUser.email,
         name: foundUser.name,
-        role: foundUser.role === 'admin' ? 'admin' : 'user',
+        password: foundUser.password,
+        role: foundUser.role,
         createdAt: foundUser.createdAt
       };
 
       setUser(userData);
-      sessionStorage.setItem('user', JSON.stringify(userData));
-
-      if (rememberMe) {
-        localStorage.setItem('rememberMe', 'true');
-        localStorage.setItem('user', JSON.stringify(userData));
-      } else {
-        localStorage.removeItem('rememberMe');
-        localStorage.removeItem('user');
-      }
+      setRememberMe(rememberMe);
+      setStoredUser(rememberMe ? userData : null);
 
       return true;
     } catch (error) {
@@ -194,58 +152,31 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const register = async (name: string, email: string, password: string): Promise<boolean> => {
     setIsLoading(true);
     try {
-      if (!isValidEmail(email)) {
-        console.error('Invalid email format');
-        return false;
-      }
+      if (!isValidEmail(email)) return false;
+      if (password.length < 8) return false;
+      if (registeredUsers.some(u => u.email === email)) return false;
       
-      if (password.length < 8) {
-        console.error('Password too short');
-        return false;
-      }
-      
-      // Simulate API delay
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      const users = JSON.parse(sessionStorage.getItem('registeredUsers') || '[]');
-      
-      // Check if user already exists
-      if (users.some((u: any) => u.email === email)) {
-        console.error('User already exists');
-        return false;
-      }
-      
-      // Hash password using improved hashing
-      const hashedPassword = hashPassword(password);
-      
-      if (!hashedPassword) {
-        console.error('Password hashing failed');
-        return false;
-      }
+      await new Promise(resolve => setTimeout(resolve, 1000)); // Simulate API delay
 
-      const newUser = {
+      const hashedPassword = hashPassword(password);
+      if (!hashedPassword) return false;
+
+      const newUser: User = {
         id: generateSecureId(),
         email,
         name,
         password: hashedPassword,
-        role: 'user' as const,
+        role: 'user',
         createdAt: new Date().toISOString()
       };
 
-      users.push(newUser);
-      sessionStorage.setItem('registeredUsers', JSON.stringify(users));
-
-      const userData: User = {
-        id: newUser.id,
-        email: newUser.email,
-        name: newUser.name,
-        role: 'user',
-        createdAt: newUser.createdAt
-      };
-
-      setUser(userData);
-      sessionStorage.setItem('user', JSON.stringify(userData));
+      setRegisteredUsers([...registeredUsers, newUser]);
       
+      // Auto-login after registration
+      setUser(newUser);
+      setStoredUser(newUser);
+      setRememberMe(true);
+
       return true;
     } catch (error) {
       console.error('Registration error:', error);
@@ -257,9 +188,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   const logout = () => {
     setUser(null);
-    sessionStorage.removeItem('user');
-    localStorage.removeItem('rememberMe');
-    localStorage.removeItem('user');
+    setStoredUser(null);
+    setRememberMe(false);
   };
 
   return (

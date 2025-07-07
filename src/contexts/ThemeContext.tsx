@@ -1,5 +1,6 @@
-
-import React, { createContext, useContext, useEffect, useState, useMemo } from 'react';
+import React, { createContext, useContext, useEffect, useMemo, useState } from 'react';
+import { useLocalStorage } from '../hooks/useLocalStorage';
+// import { useLocalStorage } from './hooks/useLocalStorage';
 
 type Theme = 'light' | 'dark' | 'system';
 type ResolvedTheme = 'light' | 'dark';
@@ -13,13 +14,7 @@ interface ThemeContextType {
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
 export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [theme, setTheme] = useState<Theme>(() => {
-    if (typeof window !== 'undefined') {
-      return (localStorage.getItem('theme') as Theme) || 'system';
-    }
-    return 'system';
-  });
-
+  const [theme, setTheme] = useLocalStorage<Theme>('theme', 'system');
   const [resolvedTheme, setResolvedTheme] = useState<ResolvedTheme>(() => {
     if (typeof window !== 'undefined') {
       if (theme === 'system') {
@@ -38,8 +33,6 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
-
-    localStorage.setItem('theme', theme);
 
     if (theme === 'system') {
       const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
@@ -60,7 +53,7 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     theme,
     resolvedTheme,
     setTheme,
-  }), [theme, resolvedTheme]);
+  }), [theme, resolvedTheme, setTheme]);
 
   return <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>;
 };
@@ -72,4 +65,3 @@ export const useTheme = () => {
   }
   return context;
 };
-

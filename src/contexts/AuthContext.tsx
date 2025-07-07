@@ -20,54 +20,49 @@ interface AuthContextType {
   isLoading: boolean;
 }
 
-// Encryption utilities with crypto-js
-const SECRET_KEY = 'your-secret-key-change-in-production'; // In production, use env variable
-
-const encryptPassword = (password: string): string => {
+// Improved password hashing with PBKDF2
+const hashPassword = (password: string): string => {
   try {
-    // Create salt for additional security
+    // Generate a random salt
     const salt = CryptoJS.lib.WordArray.random(128/8);
     
-    // Hash the password with salt using PBKDF2
-    const key = CryptoJS.PBKDF2(password, salt, {
+    // Hash the password with PBKDF2
+    const hash = CryptoJS.PBKDF2(password, salt, {
       keySize: 256/32,
-      iterations: 1000
+      iterations: 10000 // Increased iterations for better security
     });
     
-    // Encrypt the key with AES
-    const encrypted = CryptoJS.AES.encrypt(key.toString(), SECRET_KEY).toString();
-    
-    // Combine salt and encrypted data
-    return salt.toString() + ':' + encrypted;
+    // Return salt + hash (both as hex strings)
+    return salt.toString() + ':' + hash.toString();
   } catch (error) {
-    console.error('Encryption error:', error);
+    console.error('Password hashing error:', error);
     return '';
   }
 };
 
-const verifyPassword = (password: string, encryptedPassword: string): boolean => {
+const verifyPassword = (password: string, storedHash: string): boolean => {
   try {
-    // Split salt and encrypted data
-    const [saltString, encrypted] = encryptedPassword.split(':');
+    // Split the stored hash into salt and hash parts
+    const [saltHex, hashHex] = storedHash.split(':');
     
-    if (!saltString || !encrypted) return false;
+    if (!saltHex || !hashHex) {
+      console.error('Invalid stored hash format');
+      return false;
+    }
     
-    // Recreate the salt
-    const salt = CryptoJS.enc.Hex.parse(saltString);
+    // Parse the salt from hex
+    const salt = CryptoJS.enc.Hex.parse(saltHex);
     
-    // Hash the input password with the same salt
-    const key = CryptoJS.PBKDF2(password, salt, {
+    // Hash the input password with the same salt and parameters
+    const hash = CryptoJS.PBKDF2(password, salt, {
       keySize: 256/32,
-      iterations: 1000
+      iterations: 10000
     });
     
-    // Decrypt the stored password
-    const decrypted = CryptoJS.AES.decrypt(encrypted, SECRET_KEY).toString();
-    
-    // Compare the hashed passwords
-    return key.toString() === decrypted;
+    // Compare the hashes
+    return hash.toString() === hashHex;
   } catch (error) {
-    console.error('Verification error:', error);
+    console.error('Password verification error:', error);
     return false;
   }
 };
@@ -128,14 +123,12 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       clearTimeout(timeout);
       timeout = window.setTimeout(() => {
         logout();
-        // Optional: Show notification about auto-logout
         console.log('Session expired due to inactivity');
       }, 30 * 60 * 1000); // 30 minutes
     };
 
-    // Setup event listeners
     events.forEach(event => document.addEventListener(event, resetTimer));
-    resetTimer(); // Initialize timer
+    resetTimer();
 
     return () => {
       clearTimeout(timeout);
@@ -162,7 +155,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         return false;
       }
 
-      // Verify password using crypto-js
+      // Verify password using improved verification
       const isPasswordValid = verifyPassword(password, foundUser.password);
       
       if (!isPasswordValid) {
@@ -222,11 +215,11 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         return false;
       }
       
-      // Encrypt password using crypto-js
-      const encryptedPassword = encryptPassword(password);
+      // Hash password using improved hashing
+      const hashedPassword = hashPassword(password);
       
-      if (!encryptedPassword) {
-        console.error('Password encryption failed');
+      if (!hashedPassword) {
+        console.error('Password hashing failed');
         return false;
       }
 
@@ -234,7 +227,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         id: generateSecureId(),
         email,
         name,
-        password: encryptedPassword,
+        password: hashedPassword,
         role: 'user' as const,
         createdAt: new Date().toISOString()
       };

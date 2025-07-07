@@ -1,6 +1,6 @@
 import React from 'react';
 import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip } from 'recharts';
-import { CustomerSegment } from '../utils/customerSegmentation';
+import { CustomerSegment } from '../../utils/customerSegmentation';
 
 const COLORS = [
   '#3B82F6', // Blue

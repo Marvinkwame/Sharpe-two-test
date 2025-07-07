@@ -10,7 +10,7 @@ import { UserPreferencesProvider } from "./contexts/UserPreferencesContext";
 import { AuthProvider, useAuth } from "./contexts/AuthContext";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import LoadingSpinner from "./components/LoadingSpinner";
-import ErrorBoundary from "./components/ErrorBoundary";
+import ErrorBoundary from "./components/ErrorBoundary/ErrorBoundary";
 import Customers from "./pages/Customers";
 import Exchange from "./pages/Exchange";
 

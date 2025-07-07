@@ -12,7 +12,7 @@ interface UserProfileProps {
 
 export const UserProfile: React.FC<UserProfileProps> = ({
   userName = 'John Doe',
-  userRole = 'Administrator',
+  // userRole = 'Administrator',
   userInitials = 'JD'
 }) => {
   const [isOpen, setIsOpen] = useState(false);

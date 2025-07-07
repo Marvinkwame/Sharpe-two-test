@@ -65,7 +65,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [rememberMe, setRememberMe] = useLocalStorage<boolean>('rememberMe', false);
+  const [rememberMeEnabled, setRememberMeEnabled] = useLocalStorage<boolean>('rememberMe', false);
   const [storedUser, setStoredUser] = useLocalStorage<User | null>('user', null);
   const [registeredUsers, setRegisteredUsers] = useLocalStorage<User[]>('registeredUsers', []);
 
@@ -73,20 +73,26 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   useEffect(() => {
     const initializeAuth = async () => {
       try {
-        if (storedUser) {
+        // Only restore user if remember me was enabled
+        if (rememberMeEnabled && storedUser) {
+          console.log('Restoring user session - Remember Me was enabled');
           setUser(storedUser);
+        } else if (storedUser && !rememberMeEnabled) {
+          // Clear stored user if remember me is disabled
+          console.log('Clearing stored user - Remember Me was disabled');
+          setStoredUser(null);
         }
       } catch (error) {
         console.error('Auth initialization error:', error);
         setStoredUser(null);
-        setRememberMe(false);
+        setRememberMeEnabled(false);
       } finally {
         setIsLoading(false);
       }
     };
 
     initializeAuth();
-  }, [storedUser, setStoredUser, setRememberMe]);
+  }, [rememberMeEnabled, storedUser, setStoredUser, setRememberMeEnabled]);
 
   // Auto-logout timer
   useEffect(() => {
@@ -137,8 +143,16 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       };
 
       setUser(userData);
-      setRememberMe(rememberMe);
-      setStoredUser(rememberMe ? userData : null);
+      setRememberMeEnabled(rememberMe);
+      
+      // Only store user data if remember me is enabled
+      if (rememberMe) {
+        console.log('Storing user data - Remember Me enabled');
+        setStoredUser(userData);
+      } else {
+        console.log('Not storing user data - Remember Me disabled');
+        setStoredUser(null);
+      }
 
       return true;
     } catch (error) {
@@ -172,10 +186,10 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
       setRegisteredUsers([...registeredUsers, newUser]);
       
-      // Auto-login after registration
+      // Auto-login after registration with remember me enabled
       setUser(newUser);
       setStoredUser(newUser);
-      setRememberMe(true);
+      setRememberMeEnabled(true);
 
       return true;
     } catch (error) {
@@ -187,9 +201,10 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   };
 
   const logout = () => {
+    console.log('Logging out user');
     setUser(null);
     setStoredUser(null);
-    setRememberMe(false);
+    setRememberMeEnabled(false);
   };
 
   return (
